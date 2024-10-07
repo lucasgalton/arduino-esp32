@@ -20,30 +20,20 @@
 
 #include "ETH.h"
 #include "esp_system.h"
-#if ESP_IDF_VERSION_MAJOR > 3
-    #include "esp_event.h"
-    #include "esp_eth.h"
-    #include "esp_eth_phy.h"
-    #include "esp_eth_mac.h"
-    #include "esp_eth_com.h"
-#if CONFIG_IDF_TARGET_ESP32
-    #include "soc/emac_ext_struct.h"
-    #include "soc/rtc.h"
-    //#include "soc/io_mux_reg.h"
-    //#include "hal/gpio_hal.h"
-#endif
-#else
-    #include "eth_phy/phy.h"
-    #include "eth_phy/phy_tlk110.h"
-    #include "eth_phy/phy_lan8720.h"
-#endif
+#include "esp_event.h"
+#include "esp_eth.h"
+#include "esp_eth_phy.h"
+#include "esp_eth_mac.h"
+#include "esp_eth_com.h"
+#include "soc/emac_ext_struct.h"
+#include "soc/rtc.h"
 #include "lwip/err.h"
 #include "lwip/dns.h"
 
+#include "esp_eth_ksz8863.h"
+
 extern void tcpipInit();
 extern void add_esp_interface_netif(esp_interface_t interface, esp_netif_t* esp_netif); /* from WiFiGeneric */
-
-#if ESP_IDF_VERSION_MAJOR > 3
 
 /**
 * @brief Callback function invoked when lowlevel initialization is finished
@@ -87,94 +77,6 @@ static void emac_config_apll_clock(void)
 */
 #endif
 
-/*
-static esp_err_t on_lowlevel_init_done(esp_eth_handle_t eth_handle){
-#if CONFIG_IDF_TARGET_ESP32
-    if(eth_clock_mode > ETH_CLOCK_GPIO17_OUT){
-        return ESP_FAIL;
-    }
-    // First deinit current config if different
-#if CONFIG_ETH_RMII_CLK_INPUT
-    if(eth_clock_mode != ETH_CLOCK_GPIO0_IN && eth_clock_mode != ETH_CLOCK_GPIO0_OUT){
-        pinMode(0, INPUT);
-    }
-#endif
-
-#if CONFIG_ETH_RMII_CLK_OUTPUT
-#if CONFIG_ETH_RMII_CLK_OUTPUT_GPIO0
-    if(eth_clock_mode > ETH_CLOCK_GPIO0_OUT){
-        pinMode(0, INPUT);
-    }
-#elif CONFIG_ETH_RMII_CLK_OUT_GPIO == 16
-    if(eth_clock_mode != ETH_CLOCK_GPIO16_OUT){
-        pinMode(16, INPUT);
-    }
-#elif CONFIG_ETH_RMII_CLK_OUT_GPIO == 17
-    if(eth_clock_mode != ETH_CLOCK_GPIO17_OUT){
-        pinMode(17, INPUT);
-    }
-#endif
-#endif
-
-    // Setup interface for the correct pin
-#if CONFIG_ETH_PHY_INTERFACE_MII
-    EMAC_EXT.ex_phyinf_conf.phy_intf_sel = 4;
-#endif
-
-    if(eth_clock_mode == ETH_CLOCK_GPIO0_IN){
-#ifndef CONFIG_ETH_RMII_CLK_INPUT
-        // RMII clock (50MHz) input to GPIO0
-        //gpio_hal_iomux_func_sel(PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0_EMAC_TX_CLK);
-        //PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[0]);
-        pinMode(0, INPUT);
-        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[0], 5);
-        EMAC_EXT.ex_clk_ctrl.ext_en = 1;
-        EMAC_EXT.ex_clk_ctrl.int_en = 0;
-        EMAC_EXT.ex_oscclk_conf.clk_sel = 1;
-#endif
-    } else {
-        if(eth_clock_mode == ETH_CLOCK_GPIO0_OUT){
-#ifndef CONFIG_ETH_RMII_CLK_OUTPUT_GPIO0
-            // APLL clock output to GPIO0 (must be configured to 50MHz!)
-            //gpio_hal_iomux_func_sel(PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0_CLK_OUT1);
-            //PIN_INPUT_DISABLE(GPIO_PIN_MUX_REG[0]);
-            pinMode(0, OUTPUT);
-            PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[0], 1);
-            // Choose the APLL clock to output on GPIO
-            REG_WRITE(PIN_CTRL, 6);
-#endif
-        } else if(eth_clock_mode == ETH_CLOCK_GPIO16_OUT){
-#if CONFIG_ETH_RMII_CLK_OUT_GPIO != 16
-            // RMII CLK (50MHz) output to GPIO16
-            //gpio_hal_iomux_func_sel(PERIPHS_IO_MUX_GPIO16_U, FUNC_GPIO16_EMAC_CLK_OUT);
-            //PIN_INPUT_DISABLE(GPIO_PIN_MUX_REG[16]);
-            pinMode(16, OUTPUT);
-            PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[16], 5);
-#endif
-        } else if(eth_clock_mode == ETH_CLOCK_GPIO17_OUT){
-#if CONFIG_ETH_RMII_CLK_OUT_GPIO != 17
-            // RMII CLK (50MHz) output to GPIO17
-            //gpio_hal_iomux_func_sel(PERIPHS_IO_MUX_GPIO17_U, FUNC_GPIO17_EMAC_CLK_OUT_180);
-            //PIN_INPUT_DISABLE(GPIO_PIN_MUX_REG[17]);
-            pinMode(17, OUTPUT);
-            PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[17], 5);
-#endif
-        }
-#if CONFIG_ETH_RMII_CLK_INPUT
-        EMAC_EXT.ex_clk_ctrl.ext_en = 0;
-        EMAC_EXT.ex_clk_ctrl.int_en = 1;
-        EMAC_EXT.ex_oscclk_conf.clk_sel = 0;
-        emac_config_apll_clock();
-        EMAC_EXT.ex_clkout_conf.div_num = 0;
-        EMAC_EXT.ex_clkout_conf.h_div_num = 0;
-#endif
-    }
-#endif
-    return ESP_OK;
-}
-*/
-
-
 /**
 * @brief Callback function invoked when lowlevel deinitialization is finished
 *
@@ -188,38 +90,10 @@ static esp_err_t on_lowlevel_init_done(esp_eth_handle_t eth_handle){
 //    return ESP_OK;
 //}
 
-
-
-#else
-static int _eth_phy_mdc_pin = -1;
-static int _eth_phy_mdio_pin = -1;
-static int _eth_phy_power_pin = -1;
-static eth_phy_power_enable_func _eth_phy_power_enable_orig = NULL;
-
-static void _eth_phy_config_gpio(void)
-{
-    if(_eth_phy_mdc_pin < 0 || _eth_phy_mdio_pin < 0){
-        log_e("MDC and MDIO pins are not configured!");
-        return;
-    }
-    phy_rmii_configure_data_interface_pins();
-    phy_rmii_smi_configure_pins(_eth_phy_mdc_pin, _eth_phy_mdio_pin);
-}
-
-static void _eth_phy_power_enable(bool enable)
-{
-    pinMode(_eth_phy_power_pin, OUTPUT);
-    digitalWrite(_eth_phy_power_pin, enable);
-    delay(1);
-}
-#endif
-
 ETHClass::ETHClass()
     :initialized(false)
     ,staticIP(false)
-#if ESP_IDF_VERSION_MAJOR > 3
      ,eth_handle(NULL)
-#endif
      ,started(false)
 {
 }
@@ -229,7 +103,6 @@ ETHClass::~ETHClass()
 
 bool ETHClass::begin(uint8_t phy_addr, int power, int mdc, int mdio, eth_phy_type_t type, eth_clock_mode_t clock_mode, bool use_mac_from_efuse)
 {
-#if ESP_IDF_VERSION_MAJOR > 3
     eth_clock_mode = clock_mode;
     tcpipInit();
 
@@ -242,89 +115,67 @@ bool ETHClass::begin(uint8_t phy_addr, int power, int mdc, int mdio, eth_phy_typ
 
     tcpip_adapter_set_default_eth_handlers();
 
+    eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
+    eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
+
+
+    eth_esp32_emac_config_t esp32_emac_config = ETH_ESP32_EMAC_DEFAULT_CONFIG();
+
+    phy_config.reset_gpio_num = -1; // KSZ8863 is reset by separate function call since multiple instances exist
+    phy_config.phy_addr = -1; // this PHY is entry point to host
+    // MIIM interface is not used since does not provide access to all registers
+    esp32_emac_config.smi_gpio.mdc_num = -1;
+    esp32_emac_config.smi_gpio.mdio_num = -1;
+
+
+    esp_eth_mac_t *host_mac = esp_eth_mac_new_esp32(&esp32_emac_config, &mac_config);
+    esp_eth_phy_t *host_phy = esp_eth_phy_new_ksz8863(&phy_config);
+
+    esp_eth_config_t host_config = ETH_KSZ8863_DEFAULT_CONFIG(host_mac, host_phy);
+    host_config.on_lowlevel_init_done = ksz8863_board_specific_init;
+    esp_eth_handle_t host_eth_handle = NULL;
+
+    if(esp_eth_driver_install(&host_config, &host_eth_handle) != ESP_OK || host_eth_handle == NULL){
+        log_e("Esp_eth_driver_install host failed");
+        return false;
+    }
+
     esp_netif_config_t cfg = ESP_NETIF_DEFAULT_ETH();
     esp_netif_t *eth_netif = esp_netif_new(&cfg);
-
-    esp_eth_mac_t *eth_mac = NULL;
-#if CONFIG_ETH_SPI_ETHERNET_DM9051
-    if(type == ETH_PHY_DM9051){
-        return false;//todo
-    } else {
-#endif
-#if CONFIG_ETH_USE_ESP32_EMAC
-        eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
-        mac_config.clock_config.rmii.clock_mode = (eth_clock_mode) ? EMAC_CLK_OUT : EMAC_CLK_EXT_IN;
-        mac_config.clock_config.rmii.clock_gpio = (1 == eth_clock_mode) ? EMAC_APPL_CLK_OUT_GPIO : (2 == eth_clock_mode) ? EMAC_CLK_OUT_GPIO : (3 == eth_clock_mode) ? EMAC_CLK_OUT_180_GPIO : EMAC_CLK_IN_GPIO;
-        mac_config.smi_mdc_gpio_num = mdc;
-        mac_config.smi_mdio_gpio_num = mdio;
-        mac_config.sw_reset_timeout_ms = 1000;
-        eth_mac = esp_eth_mac_new_esp32(&mac_config);
-#endif
-#if CONFIG_ETH_SPI_ETHERNET_DM9051
-    }
-#endif
-
-    if(eth_mac == NULL){
-        log_e("esp_eth_mac_new_esp32 failed");
-        return false;
-    }
-
-    eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
-    phy_config.phy_addr = phy_addr;
-    phy_config.reset_gpio_num = power;
-    esp_eth_phy_t *eth_phy = NULL;
-    switch(type){
-        case ETH_PHY_LAN8720:
-            eth_phy = esp_eth_phy_new_lan8720(&phy_config);
-            break;
-        case ETH_PHY_TLK110:
-            eth_phy = esp_eth_phy_new_ip101(&phy_config);
-            break;
-        case ETH_PHY_RTL8201:
-            eth_phy = esp_eth_phy_new_rtl8201(&phy_config);
-            break;
-        case ETH_PHY_DP83848:
-            eth_phy = esp_eth_phy_new_dp83848(&phy_config);
-            break;
-#if CONFIG_ETH_SPI_ETHERNET_DM9051
-        case ETH_PHY_DM9051:
-            eth_phy = esp_eth_phy_new_dm9051(&phy_config);
-            break;
-#endif
-        case ETH_PHY_KSZ8041:
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4,4,0)
-            eth_phy = esp_eth_phy_new_ksz8041(&phy_config);
-#else
-            log_e("unsupported ethernet type 'ETH_PHY_KSZ8041'");
-#endif
-            break;
-        case ETH_PHY_KSZ8081:
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4,4,0)
-            eth_phy = esp_eth_phy_new_ksz8081(&phy_config);
-#else
-            log_e("unsupported ethernet type 'ETH_PHY_KSZ8081'");
-#endif
-            break;
-        default:
-            break;
-    }
-    if(eth_phy == NULL){
-        log_e("esp_eth_phy_new failed");
-        return false;
-    }
-
-    eth_handle = NULL;
-    esp_eth_config_t eth_config = ETH_DEFAULT_CONFIG(eth_mac, eth_phy);
-    //eth_config.on_lowlevel_init_done = on_lowlevel_init_done;
-    //eth_config.on_lowlevel_deinit_done = on_lowlevel_deinit_done;
-    if(esp_eth_driver_install(&eth_config, &eth_handle) != ESP_OK || eth_handle == NULL){
-        log_e("esp_eth_driver_install failed");
-        return false;
-    }
-
     /* attach Ethernet driver to TCP/IP stack */
-    if(esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle)) != ESP_OK){
-        log_e("esp_netif_attach failed");
+    if(esp_netif_attach(eth_netif, esp_eth_new_netif_glue(host_eth_handle)) != ESP_OK){
+        log_e("esp_netif_attach host failed");
+        return false;
+    }
+
+    // Init Switch P1 Ethernet Interface
+    ksz8863_eth_mac_config_t ksz8863_pmac_config = {
+        .pmac_mode = KSZ8863_SWITCH_MODE,
+        .port_num = KSZ8863_PORT_1,
+    };
+
+    esp_eth_mac_t *p1_mac = esp_eth_mac_new_ksz8863(&ksz8863_pmac_config, &mac_config);
+    phy_config.phy_addr = KSZ8863_PORT_1;
+    esp_eth_phy_t *p1_phy = esp_eth_phy_new_ksz8863(&phy_config);
+
+    esp_eth_config_t p1_config = ETH_KSZ8863_DEFAULT_CONFIG(p1_mac, p1_phy);
+    esp_eth_handle_t p1_eth_handle = NULL;
+    if(esp_eth_driver_install(&p1_config, &p1_eth_handle) != ESP_OK || p1_eth_handle == NULL){
+        log_e("esp_eth_driver_install switch p1 failed");
+        return false;
+    }
+
+    // Init Switch P2 Ethernet Interface
+    ksz8863_pmac_config.port_num = KSZ8863_PORT_2;
+    esp_eth_mac_t *p2_mac = esp_eth_mac_new_ksz8863(&ksz8863_pmac_config, &mac_config);
+    phy_config.phy_addr = KSZ8863_PORT_2;
+    esp_eth_phy_t *p2_phy = esp_eth_phy_new_ksz8863(&phy_config);
+
+    esp_eth_config_t p2_config = ETH_KSZ8863_DEFAULT_CONFIG(p2_mac, p2_phy);
+    esp_eth_handle_t p2_eth_handle = NULL;
+
+    if(esp_eth_driver_install(&p2_config, &p2_eth_handle) != ESP_OK || p2_eth_handle == NULL){
+        log_e("esp_eth_driver_install switch p2 failed");
         return false;
     }
 
@@ -335,72 +186,45 @@ bool ETHClass::begin(uint8_t phy_addr, int power, int mdc, int mdio, eth_phy_typ
         log_e("esp_eth_start failed");
         return false;
     }
-#else
-    esp_err_t err;
-    if(initialized){
-        err = esp_eth_enable();
-        if(err){
-            log_e("esp_eth_enable error: %d", err);
-            return false;
-        }
-        started = true;
-        return true;
-    }
-    _eth_phy_mdc_pin = mdc;
-    _eth_phy_mdio_pin = mdio;
-    _eth_phy_power_pin = power;
 
-    if(type == ETH_PHY_LAN8720){
-        eth_config_t config = phy_lan8720_default_ethernet_config;
-        memcpy(&eth_config, &config, sizeof(eth_config_t));
-    } else if(type == ETH_PHY_TLK110){
-        eth_config_t config = phy_tlk110_default_ethernet_config;
-        memcpy(&eth_config, &config, sizeof(eth_config_t));
-    } else if(type == ETH_PHY_IP101) {
-      eth_config_t config = phy_ip101_default_ethernet_config;
-      memcpy(&eth_config, &config, sizeof(eth_config_t));
-    } else {
-        log_e("Bad ETH_PHY type: %u", (uint8_t)type);
-        return false;
-    }
-
-    eth_config.phy_addr = (eth_phy_base_t)phy_addr;
-    eth_config.clock_mode = clock_mode;
-    eth_config.gpio_config = _eth_phy_config_gpio;
-    eth_config.tcpip_input = tcpip_adapter_eth_input;
-    if(_eth_phy_power_pin >= 0){
-        _eth_phy_power_enable_orig = eth_config.phy_power_enable;
-        eth_config.phy_power_enable = _eth_phy_power_enable;
-    }
-
-    tcpipInit();
-
-    if (use_mac_from_efuse)
-    {
-        uint8_t p[6] = { 0x00,0x00,0x00,0x00,0x00,0x00 };
-        esp_efuse_mac_get_custom(p);
-        esp_base_mac_addr_set(p);
-    }
-
-    err = esp_eth_init(&eth_config);
-    if(!err){
-        initialized = true;
-        err = esp_eth_enable();
-        if(err){
-            log_e("esp_eth_enable error: %d", err);
-        } else {
-            started = true;
-            return true;
-        }
-    } else {
-        log_e("esp_eth_init error: %d", err);
-    }
-#endif
     // holds a few milliseconds to let DHCP start and enter into a good state
     // FIX ME -- adresses issue https://github.com/espressif/arduino-esp32/issues/5733
     delay(50);
 
     return true;
+}
+
+// board specific initialization routine, user to update per specific needs
+esp_err_t ksz8863_board_specific_init(esp_eth_handle_t eth_handle)
+{
+    esp_err_t ret = ESP_OK;
+
+    // initialize I2C interface
+    i2c_config_t i2c_bus_config = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = CONFIG_EXAMPLE_I2C_SDA_GPIO,
+        .scl_io_num = CONFIG_EXAMPLE_I2C_SCL_GPIO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = CONFIG_EXAMPLE_I2C_CLOCK_KHZ * 1000,
+    };
+    ESP_GOTO_ON_ERROR(i2c_init(CONFIG_EXAMPLE_I2C_MASTER_PORT, &i2c_bus_config), err, TAG, "I2C initialization failed");
+    ksz8863_ctrl_i2c_config_t i2c_dev_config = {
+        .dev_addr = KSZ8863_I2C_DEV_ADDR,
+        .i2c_master_port = CONFIG_EXAMPLE_I2C_MASTER_PORT,
+    };
+    ksz8863_ctrl_intf_config_t ctrl_intf_cfg = {
+        .host_mode = KSZ8863_I2C_MODE,
+        .i2c_dev_config = &i2c_dev_config,
+    };
+
+    ESP_GOTO_ON_ERROR(ksz8863_ctrl_intf_init(&ctrl_intf_cfg), err, TAG, "KSZ8863 control interface initialization failed");
+
+    ESP_GOTO_ON_ERROR(ksz8863_hw_reset(CONFIG_EXAMPLE_KSZ8863_RST_GPIO), err, TAG, "hardware reset failed");
+    // it does not make much sense to execute SW reset right after HW reset but it is present here for demonstration purposes
+    ESP_GOTO_ON_ERROR(ksz8863_sw_reset(eth_handle), err, TAG, "software reset failed");
+err:
+    return ret;
 }
 
 bool ETHClass::config(IPAddress local_ip, IPAddress gateway, IPAddress subnet, IPAddress dns1, IPAddress dns2)
@@ -535,33 +359,21 @@ bool ETHClass::setHostname(const char * hostname)
 
 bool ETHClass::fullDuplex()
 {
-#if ESP_IDF_VERSION_MAJOR > 3
     eth_duplex_t link_duplex;
     esp_eth_ioctl(eth_handle, ETH_CMD_G_DUPLEX_MODE, &link_duplex);
     return (link_duplex == ETH_DUPLEX_FULL);
-#else
-    return eth_config.phy_get_duplex_mode();
-#endif
 }
 
 bool ETHClass::linkUp()
 {
-#if ESP_IDF_VERSION_MAJOR > 3
     return WiFiGenericClass::getStatusBits() & ETH_CONNECTED_BIT;
-#else
-    return eth_config.phy_check_link();
-#endif
 }
 
 uint8_t ETHClass::linkSpeed()
 {
-#if ESP_IDF_VERSION_MAJOR > 3
     eth_speed_t link_speed;
     esp_eth_ioctl(eth_handle, ETH_CMD_G_SPEED, &link_speed);
     return (link_speed == ETH_SPEED_10M)?10:100;
-#else
-    return eth_config.phy_get_speed_mode()?100:10;
-#endif
 }
 
 bool ETHClass::enableIpV6()
