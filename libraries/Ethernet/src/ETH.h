@@ -54,7 +54,7 @@
 
 // // Example SPI using Arduino's driver
 // #define ETH_PHY_TYPE        ETH_PHY_W5500
-// #define ETH_PHY_ADDR         1
+// #define ETH_PHY_ADDR         1gggg
 // #define ETH_PHY_CS          15
 // #define ETH_PHY_IRQ          4
 // #define ETH_PHY_RST          5
