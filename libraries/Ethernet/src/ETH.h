@@ -56,7 +56,7 @@ typedef enum { ETH_CLOCK_GPIO0_IN, ETH_CLOCK_GPIO0_OUT, ETH_CLOCK_GPIO16_OUT, ET
 typedef enum { ETH_PHY_LAN8720, ETH_PHY_TLK110, ETH_PHY_RTL8201, ETH_PHY_DP83848, ETH_PHY_DM9051, ETH_PHY_KSZ8041, ETH_PHY_KSZ8081, ETH_PHY_MAX } eth_phy_type_t;
 #define ETH_PHY_IP101 ETH_PHY_TLK110
 
-esp_err_t ksz8863_board_specific_init(esp_eth_handle_t eth_handle)
+esp_err_t ksz8863_board_specific_init(esp_eth_handle_t eth_handle);
 
 class ETHClass {
     private:
