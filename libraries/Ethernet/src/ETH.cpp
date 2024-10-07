@@ -25,7 +25,6 @@
 #include "esp_eth_phy.h"
 #include "esp_eth_mac.h"
 #include "esp_eth_com.h"
-#include "soc/emac_ext_struct.h"
 #include "soc/rtc.h"
 #include "lwip/err.h"
 #include "lwip/dns.h"
