@@ -24,6 +24,7 @@
 #include "WiFi.h"
 #include "esp_system.h"
 #include "esp_eth.h"
+#include "driver/i2c.h"
 
 #ifndef ETH_PHY_ADDR
 #define ETH_PHY_ADDR 0
