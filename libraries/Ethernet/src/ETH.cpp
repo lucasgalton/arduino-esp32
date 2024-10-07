@@ -100,6 +100,39 @@ ETHClass::ETHClass()
 ETHClass::~ETHClass()
 {}
 
+// board specific initialization routine, user to update per specific needs
+esp_err_t ksz8863_board_specific_init(esp_eth_handle_t eth_handle)
+{
+    esp_err_t ret = ESP_OK;
+
+    // initialize I2C interface
+    i2c_config_t i2c_bus_config = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = 23, //FIXME
+        .scl_io_num = 18, //FIXME
+        .sda_pullup_en = false,
+        .scl_pullup_en = false,
+        .master.clk_speed = 400 * 1000, //FIXME
+    };
+    ESP_GOTO_ON_ERROR(i2c_init(CONFIG_EXAMPLE_I2C_MASTER_PORT, &i2c_bus_config), err, TAG, "I2C initialization failed");
+    ksz8863_ctrl_i2c_config_t i2c_dev_config = {
+        .dev_addr = KSZ8863_I2C_DEV_ADDR,
+        .i2c_master_port = CONFIG_EXAMPLE_I2C_MASTER_PORT,
+    };
+    ksz8863_ctrl_intf_config_t ctrl_intf_cfg = {
+        .host_mode = KSZ8863_I2C_MODE,
+        .i2c_dev_config = &i2c_dev_config,
+    };
+
+    ESP_GOTO_ON_ERROR(ksz8863_ctrl_intf_init(&ctrl_intf_cfg), err, TAG, "KSZ8863 control interface initialization failed");
+
+    ESP_GOTO_ON_ERROR(ksz8863_hw_reset(CONFIG_EXAMPLE_KSZ8863_RST_GPIO), err, TAG, "hardware reset failed");
+    // it does not make much sense to execute SW reset right after HW reset but it is present here for demonstration purposes
+    ESP_GOTO_ON_ERROR(ksz8863_sw_reset(eth_handle), err, TAG, "software reset failed");
+err:
+    return ret;
+}
+
 bool ETHClass::begin(uint8_t phy_addr, int power, int mdc, int mdio, eth_phy_type_t type, eth_clock_mode_t clock_mode, bool use_mac_from_efuse)
 {
     eth_clock_mode = clock_mode;
@@ -122,9 +155,6 @@ bool ETHClass::begin(uint8_t phy_addr, int power, int mdc, int mdio, eth_phy_typ
 
     phy_config.reset_gpio_num = -1; // KSZ8863 is reset by separate function call since multiple instances exist
     phy_config.phy_addr = -1; // this PHY is entry point to host
-    // MIIM interface is not used since does not provide access to all registers
-    esp32_emac_config.smi_gpio.mdc_num = -1;
-    esp32_emac_config.smi_gpio.mdio_num = -1;
 
 
     esp_eth_mac_t *host_mac = esp_eth_mac_new_esp32(&esp32_emac_config, &mac_config);
@@ -193,38 +223,7 @@ bool ETHClass::begin(uint8_t phy_addr, int power, int mdc, int mdio, eth_phy_typ
     return true;
 }
 
-// board specific initialization routine, user to update per specific needs
-esp_err_t ksz8863_board_specific_init(esp_eth_handle_t eth_handle)
-{
-    esp_err_t ret = ESP_OK;
 
-    // initialize I2C interface
-    i2c_config_t i2c_bus_config = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = CONFIG_EXAMPLE_I2C_SDA_GPIO,
-        .scl_io_num = CONFIG_EXAMPLE_I2C_SCL_GPIO,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = CONFIG_EXAMPLE_I2C_CLOCK_KHZ * 1000,
-    };
-    ESP_GOTO_ON_ERROR(i2c_init(CONFIG_EXAMPLE_I2C_MASTER_PORT, &i2c_bus_config), err, TAG, "I2C initialization failed");
-    ksz8863_ctrl_i2c_config_t i2c_dev_config = {
-        .dev_addr = KSZ8863_I2C_DEV_ADDR,
-        .i2c_master_port = CONFIG_EXAMPLE_I2C_MASTER_PORT,
-    };
-    ksz8863_ctrl_intf_config_t ctrl_intf_cfg = {
-        .host_mode = KSZ8863_I2C_MODE,
-        .i2c_dev_config = &i2c_dev_config,
-    };
-
-    ESP_GOTO_ON_ERROR(ksz8863_ctrl_intf_init(&ctrl_intf_cfg), err, TAG, "KSZ8863 control interface initialization failed");
-
-    ESP_GOTO_ON_ERROR(ksz8863_hw_reset(CONFIG_EXAMPLE_KSZ8863_RST_GPIO), err, TAG, "hardware reset failed");
-    // it does not make much sense to execute SW reset right after HW reset but it is present here for demonstration purposes
-    ESP_GOTO_ON_ERROR(ksz8863_sw_reset(eth_handle), err, TAG, "software reset failed");
-err:
-    return ret;
-}
 
 bool ETHClass::config(IPAddress local_ip, IPAddress gateway, IPAddress subnet, IPAddress dns1, IPAddress dns2)
 {
