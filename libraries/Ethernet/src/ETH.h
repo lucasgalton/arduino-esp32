@@ -57,6 +57,7 @@ typedef enum { ETH_PHY_LAN8720, ETH_PHY_TLK110, ETH_PHY_RTL8201, ETH_PHY_DP83848
 #define ETH_PHY_IP101 ETH_PHY_TLK110
 
 esp_err_t ksz8863_board_specific_init(esp_eth_handle_t eth_handle);
+esp_err_t i2c_init(i2c_port_t i2c_master_port, i2c_config_t *i2c_conf);
 
 class ETHClass {
     private:
