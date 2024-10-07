@@ -103,8 +103,6 @@ ETHClass::~ETHClass()
 // board specific initialization routine, user to update per specific needs
 esp_err_t ksz8863_board_specific_init(esp_eth_handle_t eth_handle)
 {
-    esp_err_t ret = ESP_OK;
-
     // initialize I2C interface
     i2c_config_t i2c_bus_config = {
         .mode = I2C_MODE_MASTER,
@@ -114,7 +112,7 @@ esp_err_t ksz8863_board_specific_init(esp_eth_handle_t eth_handle)
         .scl_pullup_en = false,
         .master.clk_speed = 400 * 1000, //FIXME
     };
-    if(i2c_init(0, &i2c_bus_config) != ESP_OK) {
+    if (i2c_init(0, &i2c_bus_config) != ESP_OK) {
         log_e("ETH I2C initialization failed");
         return false;
     }
@@ -135,12 +133,12 @@ esp_err_t ksz8863_board_specific_init(esp_eth_handle_t eth_handle)
         return false;
     }
 
-    if(ksz8863_hw_reset(2) != ESP_OK {
+    if (ksz8863_hw_reset(2) != ESP_OK) {
     	log_e("ETH hardware reset failed");
     	return false
     }
     // it does not make much sense to execute SW reset right after HW reset but it is present here for demonstration purposes
-    if(ksz8863_sw_reset(eth_handle) != ESP_OK) {
+    if (ksz8863_sw_reset(eth_handle) != ESP_OK) {
     	log_e("ETH software reset failed");
     	return false
     }
