@@ -208,8 +208,8 @@ bool ETHClass::begin(uint8_t phy_addr, int power, int mdc, int mdio, eth_phy_typ
 
     // Init Switch P1 Ethernet Interface
     ksz8863_eth_mac_config_t ksz8863_pmac_config = {
-        .pmac_mode = KSZ8863_SWITCH_MODE,
         .port_num = KSZ8863_PORT_1,
+        .pmac_mode = KSZ8863_SWITCH_MODE,
     };
 
     esp_eth_mac_t *p1_mac = esp_eth_mac_new_ksz8863(&ksz8863_pmac_config, &mac_config);
