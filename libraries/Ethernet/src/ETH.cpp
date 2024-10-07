@@ -122,12 +122,12 @@ esp_err_t ksz8863_board_specific_init(esp_eth_handle_t eth_handle)
 {
     // initialize I2C interface
     i2c_config_t i2c_bus_config = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = 23, //FIXME
-        .scl_io_num = 18, //FIXME
-        .sda_pullup_en = false,
-        .scl_pullup_en = false,
-        .master.clk_speed = 400000, //FIXME
+        I2C_MODE_MASTER,
+        23, //FIXME sda gpio
+        18, //FIXME scl gpio
+        false, //FIXME sda pullup
+        false, //FIXME scl pullup
+        400000 //FIXME i2c speed
     };
     if (i2c_init(0, &i2c_bus_config) != ESP_OK) {
         log_e("ETH I2C initialization failed");
