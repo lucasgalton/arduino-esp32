@@ -1,16 +1,8 @@
-// Copyright 2019 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #pragma once
 
 #include <stdint.h>
@@ -19,7 +11,11 @@
 extern "C" {
 #endif
 
-/******************Basic PHY Registers*******************/
+/**
+ *
+ * This file defines basic PHY registers in compliance to IEEE 802.3, 22.2.4 Management functions section.
+ *
+ */
 
 /**
  * @brief BMCR(Basic Mode Control Register)
@@ -157,6 +153,32 @@ typedef union {
     uint32_t val;
 } aner_reg_t;
 #define ETH_PHY_ANER_REG_ADDR (0x06)
+
+/**
+ * @brief MMD Access control register
+ *
+ */
+typedef union {
+    struct {
+        uint32_t devaddr : 5;       /*!< MMD address */
+        uint32_t reserved0 : 9;     /*!< Reserved */
+        uint32_t function : 2;      /*!< MMD function */
+    };
+    uint32_t val;
+} mmdctrl_reg_t;
+#define ETH_PHY_MMDCTRL_REG_ADDR (0x0D)
+
+/**
+ * @brief MMD Access address register
+ *
+ */
+typedef union {
+    struct {
+        uint32_t adrdata : 16;      /*!< MMD address/data */
+    };
+    uint32_t val;
+} mmdad_reg_t;
+#define ETH_PHY_MMDAD_REG_ADDR (0x0E)
 
 #ifdef __cplusplus
 }
